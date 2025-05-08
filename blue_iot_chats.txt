@@ -1,0 +1,1512 @@
+vabbè, ma fammi un'applicazione ben strutturata, con separazione dei files ecc. Html/css/javascript. Un'app che si interfacci con l'engine bluiot (poi facciamo un server node.js che lo simuli in tutto e per tutto, tanto hai tutta la documentazione) e che si interfacci anche, con chiamate GET, a un gestionale per ricavare l'azienda che si collega, gli utenti di quell'azienda e gli assets di quell'azienda. Ricorda che quest'applicazione dovrà permettere quindi la login all'utente admin dell'azienda che sta facendo il cantiere, , ricavare tutti gli assets dal gestionale, ricavare tutti gli utenti che faranno parte del cantiere (magari a monte nel gestionale prevederemo un campo o qualcosa da passare alla nostra app così non prendere tutti gli utenti, ma solo quelli interessati nel cantiere, e poi utilizzare una sezione di impostazioni per impostare la mappa del cantiere e settare la posizione che viene passata dall'engine blueiot, i vari tag e dispositivi di rilevazione blueiot che dovranno essere associati agli utenti presenti nel cantiere. Quindi prevederemo anche un altro server, magari node.js o php, che sarà solo per quest'app frontend e che ci permetterà si salvare queste cose, sono stato abbastanza chiaro o hai bisogno di altro?ModificaArchitettato sistema web per tracciamento aziendale con BlueIOT.8sThe user is asking me to help design a web application that interfaces with BlueIOT, a positioning system for tracking assets and personnel. The application will be used in a construction site scenario to monitor employees and assets. Let me break down what the requirements seem to be:
+
+Technology stack:
+
+Frontend: JavaScript/TypeScript, possibly Vue.js
+Full-stack framework: Possibly Next.js
+Backend: Node.js for interfacing with BlueIOT and the user's CRM
+
+
+Core functionalities:
+
+Login system for company administrators
+Integration with user's CRM to fetch:
+
+Company information
+Employee data (specifically those assigned to the construction site)
+Asset data
+
+
+Integration with BlueIOT to:
+
+Import site maps (DXF files)
+Configure positioning antennas
+Associate BlueIOT tags with employees and assets
+Track real-time positioning of employees and assets
+
+
+Settings section to configure maps, BlueIOT devices, and associations
+
+
+Data flow:
+
+User logs in
+App fetches company, employee, and asset data from CRM via GET requests
+App allows configuration of BlueIOT tags, antennas, and maps
+App displays real-time positioning of employees and assets
+
+
+Application structure:
+
+Well-organized with proper separation of concerns (HTML/CSS/JavaScript)
+Server-side component to handle data persistence for BlueIOT configurations
+API endpoints to interface with both the CRM and BlueIOT systems
+
+
+Development approach:
+
+Initially create a simulated BlueIOT engine using Node.js
+Create a frontend application with proper structure
+Implement API calls to CRM and BlueIOT (simulated for now)
+
+
+
+From the documents provided by the user, I can see that BlueIOT offers:
+
+A Websocket interface for real-time data
+APIs for configuring tags, antennas, maps, and other elements
+Different coordinate systems
+Features for tracking assets, personnel, and setting up alarms, attendance, etc.
+
+I will design a well-structured web application that can fulfill these requirements, starting with the core architecture and then detailing the specific components needed. I'll focus on creating a scalable, maintainable solution that properly separates concerns and follows best practices.
+I'll design:
+
+Overall application architecture
+Frontend components and structure
+Backend services
+Data models
+API interfaces
+Key screens and user flows
+
+Let me start by outlining the architecture.BlueIOT Integration Application Design
+Based on your requirements, I'll design a comprehensive web application that integrates with BlueIOT positioning system and your CRM. This solution will help you monitor employees and assets in a construction site environment.
+Application Architecture
+I recommend a modern, scalable architecture with clean separation of concerns:
+Technology Stack
+Frontend:
+
+Vue.js 3 (with Composition API) for the UI framework
+TypeScript for type safety
+Tailwind CSS for styling
+Pinia for state management
+Vue Router for navigation
+
+Backend:
+
+Node.js with Express for the server
+TypeScript for type safety
+MongoDB for storing application configurations
+Websocket client for BlueIOT real-time data
+REST client for CRM API integration
+
+Build Tools:
+
+Vite for frontend development
+ESLint and Prettier for code quality
+Jest for testing
+
+Project Structure
+blue-site-monitor/
+├── client/                  # Frontend Vue application
+│   ├── public/              # Static assets
+│   ├── src/
+│   │   ├── assets/          # Images, fonts, etc.
+│   │   ├── components/      # Reusable Vue components
+│   │   │   ├── common/      # Common UI components
+│   │   │   ├── dashboard/   # Dashboard components
+│   │   │   ├── map/         # Map visualization components
+│   │   │   └── settings/    # Settings components
+│   │   ├── composables/     # Vue 3 composable functions
+│   │   ├── layouts/         # Page layouts
+│   │   ├── router/          # Vue router configuration
+│   │   ├── services/        # API service modules
+│   │   │   ├── blueiot.ts   # BlueIOT API service
+│   │   │   ├── crm.ts       # CRM API service
+│   │   │   └── auth.ts      # Auth service
+│   │   ├── stores/          # Pinia stores
+│   │   ├── types/           # TypeScript type definitions
+│   │   ├── utils/           # Utility functions
+│   │   ├── views/           # Page components
+│   │   ├── App.vue          # Root component
+│   │   └── main.ts          # Application entry point
+│   ├── index.html           # HTML entry point
+│   └── vite.config.ts       # Vite configuration
+│
+├── server/                  # Backend Node.js application
+│   ├── src/
+│   │   ├── controllers/     # Route controllers
+│   │   ├── middleware/      # Express middleware
+│   │   ├── models/          # Data models
+│   │   ├── routes/          # Express routes
+│   │   ├── services/        # Business logic services
+│   │   │   ├── blueiot/     # BlueIOT integration service
+│   │   │   ├── crm/         # CRM integration service
+│   │   │   └── websocket/   # WebSocket service for BlueIOT
+│   │   ├── types/           # TypeScript type definitions
+│   │   ├── utils/           # Utility functions
+│   │   └── app.ts           # Express application setup
+│   ├── tsconfig.json        # TypeScript configuration
+│   └── package.json         # Node.js dependencies
+│
+├── mock-servers/           # Simulated services for development
+│   ├── blueiot-mock/       # Mock BlueIOT engine
+│   └── crm-mock/           # Mock CRM API
+│
+├── .gitignore              # Git ignore file
+├── package.json            # Root package.json for scripts
+└── README.md               # Project documentation
+Key Components Implementation
+Let me provide implementation details for key parts of the application:
+1. BlueIOT Integration Service
+typescript// server/src/services/blueiot/websocket-client.ts
+import WebSocket from 'ws';
+import { EventEmitter } from 'events';
+import { calculateCRC16 } from '../../utils/crc';
+
+export class BlueIOTWebSocketClient extends EventEmitter {
+  private ws: WebSocket | null = null;
+  private serverUrl: string;
+  private username: string;
+  private password: string;
+  private salt: string;
+  private reconnectInterval: number = 5000;
+  private reconnectTimer: NodeJS.Timeout | null = null;
+
+  constructor(serverUrl: string, username: string, password: string, salt: string) {
+    super();
+    this.serverUrl = serverUrl;
+    this.username = username;
+    this.password = password;
+    this.salt = salt;
+  }
+
+  connect(): void {
+    if (this.ws) {
+      this.ws.close();
+    }
+
+    this.ws = new WebSocket(this.serverUrl, 'localSensePush-protocol');
+
+    this.ws.on('open', () => {
+      console.log('Connected to BlueIOT WebSocket server');
+      this.emit('connected');
+      this.authenticate();
+    });
+
+    this.ws.on('message', (data: Buffer) => {
+      this.handleMessage(data);
+    });
+
+    this.ws.on('close', () => {
+      console.log('Disconnected from BlueIOT WebSocket server');
+      this.emit('disconnected');
+      this.scheduleReconnect();
+    });
+
+    this.ws.on('error', (error) => {
+      console.error('WebSocket error:', error);
+      this.emit('error', error);
+    });
+  }
+
+  private authenticate(): void {
+    if (!this.ws) return;
+
+    // Implementation of BlueIOT authentication based on the documentation
+    // Create authentication frame with MD5 password + salt
+    const md5Password = this.createMD5Password();
+    const authFrame = this.createAuthFrame(this.username, md5Password);
+    
+    this.ws.send(authFrame);
+  }
+
+  private createMD5Password(): string {
+    // MD5 password implementation based on BlueIOT docs
+    // MD5(MD5(password) + salt)
+    const crypto = require('crypto');
+    const md5Pass = crypto.createHash('md5').update(this.password).digest('hex');
+    return crypto.createHash('md5').update(md5Pass + this.salt).digest('hex');
+  }
+
+  private createAuthFrame(username: string, password: string): Buffer {
+    // Implementation of auth frame based on BlueIOT protocol docs
+    // Frame structure: frame header (0xCC5F) + frame type (0x27) + username length + username + password length + password + CRC16 + frame tail (0xAABB)
+    
+    // Example implementation (needs to be adjusted based on exact protocol)
+    const frameHeader = Buffer.from([0xCC, 0x5F]);
+    const frameType = Buffer.from([0x27]);
+    
+    const usernameBuffer = Buffer.from(username);
+    const usernameLengthBuffer = Buffer.alloc(4);
+    usernameLengthBuffer.writeUInt32BE(usernameBuffer.length, 0);
+    
+    const passwordBuffer = Buffer.from(password);
+    const passwordLengthBuffer = Buffer.alloc(4);
+    passwordLengthBuffer.writeUInt32BE(passwordBuffer.length, 0);
+    
+    const dataForCRC = Buffer.concat([
+      frameType,
+      usernameLengthBuffer,
+      usernameBuffer,
+      passwordLengthBuffer,
+      passwordBuffer
+    ]);
+    
+    const crc = calculateCRC16(dataForCRC);
+    const crcBuffer = Buffer.alloc(2);
+    crcBuffer.writeUInt16BE(crc, 0);
+    
+    const frameTail = Buffer.from([0xAA, 0xBB]);
+    
+    return Buffer.concat([
+      frameHeader,
+      dataForCRC,
+      crcBuffer,
+      frameTail
+    ]);
+  }
+
+  private handleMessage(data: Buffer): void {
+    // Parse incoming BlueIOT messages based on documentation
+    // Extract frame type, payload, etc.
+    
+    // Basic example (would need to be expanded based on actual protocol)
+    if (data.length < 4) return; // Too short to be valid
+    
+    const frameHeader = data.readUInt16BE(0);
+    if (frameHeader !== 0xCC5F) return; // Invalid frame header
+    
+    const frameType = data.readUInt8(2);
+    
+    switch (frameType) {
+      case 0x81: // Tag position data
+        this.handleTagPositionData(data);
+        break;
+      case 0x85: // Battery info
+        this.handleBatteryInfo(data);
+        break;
+      case 0x89: // Alarm info
+        this.handleAlarmInfo(data);
+        break;
+      // Additional cases for other frame types
+      default:
+        console.log(`Received unhandled frame type: 0x${frameType.toString(16)}`);
+    }
+  }
+
+  private handleTagPositionData(data: Buffer): void {
+    // Parse position data according to BlueIOT protocol
+    // Extract tag IDs, coordinates, etc.
+    // Emit appropriate events with parsed data
+    
+    // Basic structure (to be expanded)
+    const tagCount = data.readUInt8(3);
+    
+    const tags = [];
+    let offset = 4;
+    
+    for (let i = 0; i < tagCount; i++) {
+      // Extract tag data based on protocol (example extraction)
+      const tagId = data.readBigUInt64BE(offset);
+      offset += 8;
+      
+      const xCoord = data.readFloatBE(offset);
+      offset += 4;
+      
+      const yCoord = data.readFloatBE(offset);
+      offset += 4;
+      
+      const zCoord = data.readInt16BE(offset);
+      offset += 2;
+      
+      const mapId = data.readUInt8(offset);
+      offset += 1;
+      
+      // Extract remaining fields...
+      
+      tags.push({
+        tagId: tagId.toString(),
+        coordinates: {
+          x: xCoord,
+          y: yCoord,
+          z: zCoord / 100, // Convert to meters if in cm
+        },
+        mapId,
+        // Add other fields
+      });
+    }
+    
+    this.emit('positionData', tags);
+  }
+
+  // Additional handler methods for different frame types
+
+  subscribeToTagIds(tagIds: string[]): void {
+    if (!this.ws) return;
+    
+    // Create subscription frame based on BlueIOT protocol
+    // Frame structure for tag subscription
+    
+    // Example implementation
+    const frameHeader = Buffer.from([0xCC, 0x5F]);
+    const frameType = Buffer.from([0xA9]);
+    
+    const subscriptionType = Buffer.from([0x00, 0x00]); // Tag set
+    
+    const tagCountBuffer = Buffer.alloc(2);
+    tagCountBuffer.writeUInt16BE(tagIds.length, 0);
+    
+    let tagBuffers = [];
+    for (const tagId of tagIds) {
+      // Convert tag ID string to 8-byte buffer
+      const tagBuffer = Buffer.alloc(8);
+      const tagIdBigInt = BigInt(tagId);
+      tagBuffer.writeBigUInt64BE(tagIdBigInt, 0);
+      tagBuffers.push(tagBuffer);
+    }
+    
+    const dataForCRC = Buffer.concat([
+      frameType,
+      subscriptionType,
+      tagCountBuffer,
+      ...tagBuffers
+    ]);
+    
+    const crc = calculateCRC16(dataForCRC);
+    const crcBuffer = Buffer.alloc(2);
+    crcBuffer.writeUInt16BE(crc, 0);
+    
+    const frameTail = Buffer.from([0xAA, 0xBB]);
+    
+    const subscriptionFrame = Buffer.concat([
+      frameHeader,
+      dataForCRC,
+      crcBuffer,
+      frameTail
+    ]);
+    
+    this.ws.send(subscriptionFrame);
+  }
+
+  // Other subscription methods for different entity types
+
+  disconnect(): void {
+    if (this.ws) {
+      this.ws.close();
+      this.ws = null;
+    }
+    
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+  }
+
+  private scheduleReconnect(): void {
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+    }
+    
+    this.reconnectTimer = setTimeout(() => {
+      console.log('Attempting to reconnect to BlueIOT WebSocket server...');
+      this.connect();
+    }, this.reconnectInterval);
+  }
+}
+2. Frontend CRM Service
+typescript// client/src/services/crm.ts
+import axios, { AxiosInstance } from 'axios';
+import { Company, Employee, Asset } from '../types';
+
+export class CrmService {
+  private api: AxiosInstance;
+  
+  constructor(baseURL: string, apiKey: string) {
+    this.api = axios.create({
+      baseURL,
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      }
+    });
+  }
+  
+  async authenticate(username: string, password: string): Promise<string> {
+    try {
+      const response = await this.api.post('/auth/login', { username, password });
+      return response.data.token;
+    } catch (error) {
+      console.error('Authentication error:', error);
+      throw new Error('Authentication failed');
+    }
+  }
+  
+  async getCompanyInfo(companyId: string): Promise<Company> {
+    try {
+      const response = await this.api.get(`/companies/${companyId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch company info:', error);
+      throw new Error('Failed to fetch company information');
+    }
+  }
+  
+  async getCompanyEmployees(companyId: string, siteId?: string): Promise<Employee[]> {
+    try {
+      let url = `/companies/${companyId}/employees`;
+      if (siteId) {
+        url += `?siteId=${siteId}`;
+      }
+      
+      const response = await this.api.get(url);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch employees:', error);
+      throw new Error('Failed to fetch employee information');
+    }
+  }
+  
+  async getCompanyAssets(companyId: string, siteId?: string): Promise<Asset[]> {
+    try {
+      let url = `/companies/${companyId}/assets`;
+      if (siteId) {
+        url += `?siteId=${siteId}`;
+      }
+      
+      const response = await this.api.get(url);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch assets:', error);
+      throw new Error('Failed to fetch asset information');
+    }
+  }
+}
+
+export default new CrmService(
+  import.meta.env.VITE_CRM_API_URL,
+  import.meta.env.VITE_CRM_API_KEY
+);
+3. Site Configuration Store
+typescript// client/src/stores/siteConfigurationStore.ts
+import { defineStore } from 'pinia';
+import { ref, computed } from 'vue';
+import { SiteMap, Antenna, TagAssignment } from '../types';
+import apiService from '../services/api';
+
+export const useSiteConfigurationStore = defineStore('siteConfiguration', () => {
+  // State
+  const maps = ref<SiteMap[]>([]);
+  const currentMapId = ref<string | null>(null);
+  const antennas = ref<Antenna[]>([]);
+  const tagAssignments = ref<TagAssignment[]>([]);
+  const isConfiguring = ref(false);
+  
+  // Getters
+  const currentMap = computed(() => {
+    return maps.value.find(map => map.id === currentMapId.value) || null;
+  });
+  
+  const antennasForCurrentMap = computed(() => {
+    if (!currentMapId.value) return [];
+    return antennas.value.filter(antenna => antenna.mapId === currentMapId.value);
+  });
+  
+  // Actions
+  async function fetchSiteConfiguration(siteId: string) {
+    try {
+      isConfiguring.value = true;
+      
+      // Fetch maps
+      const fetchedMaps = await apiService.getMaps(siteId);
+      maps.value = fetchedMaps;
+      
+      if (fetchedMaps.length > 0 && !currentMapId.value) {
+        currentMapId.value = fetchedMaps[0].id;
+      }
+      
+      // Fetch antennas
+      const fetchedAntennas = await apiService.getAntennas(siteId);
+      antennas.value = fetchedAntennas;
+      
+      // Fetch tag assignments
+      const fetchedAssignments = await apiService.getTagAssignments(siteId);
+      tagAssignments.value = fetchedAssignments;
+    } catch (error) {
+      console.error('Failed to fetch site configuration:', error);
+      throw new Error('Failed to load site configuration');
+    } finally {
+      isConfiguring.value = false;
+    }
+  }
+  
+  async function uploadMap(siteId: string, file: File, mapName: string, floorNumber: number) {
+    try {
+      isConfiguring.value = true;
+      
+      const newMap = await apiService.uploadMap(siteId, file, mapName, floorNumber);
+      maps.value.push(newMap);
+      
+      if (!currentMapId.value) {
+        currentMapId.value = newMap.id;
+      }
+      
+      return newMap;
+    } catch (error) {
+      console.error('Failed to upload map:', error);
+      throw new Error('Failed to upload map');
+    } finally {
+      isConfiguring.value = false;
+    }
+  }
+  
+  async function addAntenna(antenna: Omit<Antenna, 'id'>) {
+    try {
+      isConfiguring.value = true;
+      
+      const newAntenna = await apiService.createAntenna(antenna);
+      antennas.value.push(newAntenna);
+      
+      return newAntenna;
+    } catch (error) {
+      console.error('Failed to add antenna:', error);
+      throw new Error('Failed to add antenna');
+    } finally {
+      isConfiguring.value = false;
+    }
+  }
+  
+  async function assignTag(assignment: Omit<TagAssignment, 'id'>) {
+    try {
+      isConfiguring.value = true;
+      
+      const newAssignment = await apiService.createTagAssignment(assignment);
+      tagAssignments.value.push(newAssignment);
+      
+      return newAssignment;
+    } catch (error) {
+      console.error('Failed to assign tag:', error);
+      throw new Error('Failed to assign tag');
+    } finally {
+      isConfiguring.value = false;
+    }
+  }
+  
+  async function updateAntenna(antennaId: string, updates: Partial<Antenna>) {
+    try {
+      isConfiguring.value = true;
+      
+      const updatedAntenna = await apiService.updateAntenna(antennaId, updates);
+      
+      const index = antennas.value.findIndex(a => a.id === antennaId);
+      if (index !== -1) {
+        antennas.value[index] = updatedAntenna;
+      }
+      
+      return updatedAntenna;
+    } catch (error) {
+      console.error('Failed to update antenna:', error);
+      throw new Error('Failed to update antenna');
+    } finally {
+      isConfiguring.value = false;
+    }
+  }
+  
+  async function removeAntenna(antennaId: string) {
+    try {
+      isConfiguring.value = true;
+      
+      await apiService.deleteAntenna(antennaId);
+      
+      antennas.value = antennas.value.filter(a => a.id !== antennaId);
+    } catch (error) {
+      console.error('Failed to remove antenna:', error);
+      throw new Error('Failed to remove antenna');
+    } finally {
+      isConfiguring.value = false;
+    }
+  }
+  
+  function setCurrentMap(mapId: string) {
+    currentMapId.value = mapId;
+  }
+  
+  return {
+    // State
+    maps,
+    currentMapId,
+    antennas,
+    tagAssignments,
+    isConfiguring,
+    
+    // Getters
+    currentMap,
+    antennasForCurrentMap,
+    
+    // Actions
+    fetchSiteConfiguration,
+    uploadMap,
+    addAntenna,
+    assignTag,
+    updateAntenna,
+    removeAntenna,
+    setCurrentMap
+  };
+});
+4. DXF Map Component
+vue<!-- client/src/components/map/DxfMapViewer.vue -->
+<template>
+  <div class="dxf-map-container" ref="mapContainer">
+    <div class="dxf-map-controls" v-if="map">
+      <button @click="zoomIn" title="Zoom In">
+        <i class="fas fa-plus"></i>
+      </button>
+      <button @click="zoomOut" title="Zoom Out">
+        <i class="fas fa-minus"></i>
+      </button>
+      <button @click="resetView" title="Reset View">
+        <i class="fas fa-home"></i>
+      </button>
+    </div>
+    
+    <div class="dxf-map-canvas-container">
+      <canvas ref="mapCanvas" class="dxf-map-canvas"></canvas>
+      
+      <div v-if="isEditing" class="dxf-map-edit-overlay">
+        <div 
+          v-for="antenna in antennas" 
+          :key="antenna.id" 
+          class="antenna-marker"
+          :style="getAntennaMarkerStyle(antenna)"
+          @mousedown="startDragAntenna($event, antenna)"
+        >
+          <div class="antenna-icon"></div>
+          <div class="antenna-label">{{ antenna.name }}</div>
+        </div>
+        
+        <div 
+          v-for="tagAssignment in tagAssignments" 
+          :key="tagAssignment.id" 
+          class="tag-marker"
+          :class="getTagMarkerClass(tagAssignment)"
+          :style="getTagMarkerStyle(tagAssignment)"
+        >
+          <div class="tag-icon"></div>
+          <div class="tag-label">{{ getTagLabel(tagAssignment) }}</div>
+        </div>
+      </div>
+    </div>
+    
+    <div v-if="!map" class="dxf-map-placeholder">
+      <p>No map loaded. Please upload a map file.</p>
+      <label class="upload-button">
+        Upload Map
+        <input type="file" accept=".dxf" @change="handleMapUpload" hidden>
+      </label>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue';
+import { useSiteConfigurationStore } from '../../stores/siteConfigurationStore';
+import { usePositioningStore } from '../../stores/positioningStore';
+import { Antenna, TagAssignment } from '../../types';
+import * as THREE from 'three';
+import { DXFLoader } from '../../utils/dxfLoader';
+
+const props = defineProps<{
+  mapId?: string;
+  isEditing?: boolean;
+}>();
+
+const mapContainer = ref<HTMLDivElement | null>(null);
+const mapCanvas = ref<HTMLCanvasElement | null>(null);
+const draggedAntenna = ref<Antenna | null>(null);
+const dragStartPosition = ref({ x: 0, y: 0 });
+
+const siteConfigStore = useSiteConfigurationStore();
+const positioningStore = usePositioningStore();
+
+// Three.js variables
+let scene: THREE.Scene | null = null;
+let camera: THREE.OrthographicCamera | null = null;
+let renderer: THREE.WebGLRenderer | null = null;
+let dxfObject: THREE.Group | null = null;
+
+// Computed properties
+const map = computed(() => {
+  if (props.mapId) {
+    return siteConfigStore.maps.find(m => m.id === props.mapId) || null;
+  }
+  return siteConfigStore.currentMap;
+});
+
+const antennas = computed(() => {
+  if (!map.value) return [];
+  return siteConfigStore.antennas.filter(a => a.mapId === map.value?.id);
+});
+
+const tagAssignments = computed(() => {
+  if (!map.value) return [];
+  
+  // Get real-time positions for assigned tags
+  return siteConfigStore.tagAssignments.filter(assignment => {
+    const position = positioningStore.getTagPosition(assignment.tagId);
+    return position && position.mapId === map.value?.id;
+  });
+});
+
+// Methods for map rendering
+function initializeThreeJs() {
+  if (!mapCanvas.value) return;
+  
+  // Initialize scene
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0xf0f0f0);
+  
+  // Initialize camera (orthographic for 2D viewing)
+  const width = mapContainer.value?.clientWidth || 800;
+  const height = mapContainer.value?.clientHeight || 600;
+  const aspectRatio = width / height;
+  
+  camera = new THREE.OrthographicCamera(
+    -10 * aspectRatio, 10 * aspectRatio, 
+    10, -10, 
+    0.1, 1000
+  );
+  camera.position.z = 10;
+  
+  // Initialize renderer
+  renderer = new THREE.WebGLRenderer({ 
+    canvas: mapCanvas.value,
+    antialias: true
+  });
+  renderer.setSize(width, height);
+  
+  // Add ambient light
+  const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+  scene.add(ambientLight);
+  
+  // Start animation loop
+  animate();
+}
+
+function loadDxfMap(mapUrl: string) {
+  if (!scene) return;
+  
+  // Clear previous map if exists
+  if (dxfObject) {
+    scene.remove(dxfObject);
+    dxfObject = null;
+  }
+  
+  // Load new DXF file
+  const loader = new DXFLoader();
+  loader.load(mapUrl, (object) => {
+    dxfObject = object;
+    scene?.add(object);
+    
+    // Center and fit the map
+    fitMapToView();
+  });
+}
+
+function fitMapToView() {
+  if (!dxfObject || !camera) return;
+  
+  // Calculate bounding box
+  const boundingBox = new THREE.Box3().setFromObject(dxfObject);
+  const center = boundingBox.getCenter(new THREE.Vector3());
+  const size = boundingBox.getSize(new THREE.Vector3());
+  
+  // Center the map
+  dxfObject.position.x = -center.x;
+  dxfObject.position.y = -center.y;
+  
+  // Adjust camera
+  const maxDim = Math.max(size.x, size.y);
+  const aspectRatio = mapContainer.value?.clientWidth || 1 / mapContainer.value?.clientHeight || 1;
+  
+  if (camera instanceof THREE.OrthographicCamera) {
+    camera.left = -maxDim * aspectRatio / 2;
+    camera.right = maxDim * aspectRatio / 2;
+    camera.top = maxDim / 2;
+    camera.bottom = -maxDim / 2;
+    camera.updateProjectionMatrix();
+  }
+}
+
+function animate() {
+  if (!renderer || !scene || !camera) return;
+  
+  requestAnimationFrame(animate);
+  renderer.render(scene, camera);
+}
+
+function zoomIn() {
+  if (!camera || !(camera instanceof THREE.OrthographicCamera)) return;
+  
+  camera.left *= 0.8;
+  camera.right *= 0.8;
+  camera.top *= 0.8;
+  camera.bottom *= 0.8;
+  camera.updateProjectionMatrix();
+}
+
+function zoomOut() {
+  if (!camera || !(camera instanceof THREE.OrthographicCamera)) return;
+  
+  camera.left *= 1.2;
+  camera.right *= 1.2;
+  camera.top *= 1.2;
+  camera.bottom *= 1.2;
+  camera.updateProjectionMatrix();
+}
+
+function resetView() {
+  fitMapToView();
+}
+
+function handleMapUpload(event: Event) {
+  const input = event.target as HTMLInputElement;
+  const files = input.files;
+  
+  if (!files || files.length === 0) return;
+  
+  const file = files[0];
+  if (!file.name.toLowerCase().endsWith('.dxf')) {
+    alert('Please upload a DXF file');
+    return;
+  }
+  
+  // Create a dialog to get map name and floor number
+  const mapName = prompt('Enter map name:', file.name.replace('.dxf', ''));
+  if (!mapName) return;
+  
+  const floorNumberStr = prompt('Enter floor number:', '1');
+  if (!floorNumberStr) return;
+  
+  const floorNumber = parseInt(floorNumberStr, 10);
+  if (isNaN(floorNumber)) {
+    alert('Floor number must be a valid number');
+    return;
+  }
+  
+  // Upload map to server
+  siteConfigStore.uploadMap('current-site-id', file, mapName, floorNumber)
+    .then((newMap) => {
+      alert(`Map "${mapName}" uploaded successfully!`);
+      siteConfigStore.setCurrentMap(newMap.id);
+    })
+    .catch((error) => {
+      alert(`Failed to upload map: ${error.message}`);
+    });
+}
+
+// Methods for editing antennas
+function getAntennaMarkerStyle(antenna: Antenna) {
+  return {
+    left: `${antenna.x}px`,
+    top: `${antenna.y}px`
+  };
+}
+
+function startDragAntenna(event: MouseEvent, antenna: Antenna) {
+  if (!props.isEditing) return;
+  
+  draggedAntenna.value = antenna;
+  dragStartPosition.value = {
+    x: event.clientX,
+    y: event.clientY
+  };
+  
+  // Add event listeners for drag
+  document.addEventListener('mousemove', handleAntennaDrag);
+  document.addEventListener('mouseup', stopDragAntenna);
+  
+  event.preventDefault();
+}
+
+function handleAntennaDrag(event: MouseEvent) {
+  if (!draggedAntenna.value) return;
+  
+  const dx = event.clientX - dragStartPosition.value.x;
+  const dy = event.clientY - dragStartPosition.value.y;
+  
+  // Update antenna position in store
+  siteConfigStore.updateAntenna(draggedAntenna.value.id, {
+    x: draggedAntenna.value.x + dx,
+    y: draggedAntenna.value.y + dy
+  });
+  
+  // Update drag start position
+  dragStartPosition.value = {
+    x: event.clientX,
+    y: event.clientY
+  };
+}
+
+function stopDragAntenna() {
+  draggedAntenna.value = null;
+  
+  // Remove event listeners
+  document.removeEventListener('mousemove', handleAntennaDrag);
+  document.removeEventListener('mouseup', stopDragAntenna);
+}
+
+// Methods for tag markers
+function getTagMarkerClass(tagAssignment: TagAssignment) {
+  const entityType = tagAssignment.entityType;
+  return {
+    'tag-marker-employee': entityType === 'employee',
+    'tag-marker-asset': entityType === 'asset'
+  };
+}
+
+function getTagMarkerStyle(tagAssignment: TagAssignment) {
+  const position = positioningStore.getTagPosition(tagAssignment.tagId);
+  
+  if (!position) return { display: 'none' };
+  
+  return {
+    left: `${position.x}px`,
+    top: `${position.y}px`
+  };
+}
+
+function getTagLabel(tagAssignment: TagAssignment) {
+  if (tagAssignment.entityType === 'employee') {
+    const employee = positioningStore.getEmployeeById(tagAssignment.entityId);
+    return employee ? employee.name : `Tag ${tagAssignment.tagId}`;
+  } else if (tagAssignment.entityType === 'asset') {
+    const asset = positioningStore.getAssetById(tagAssignment.entityId);
+    return asset ? asset.name : `Tag ${tagAssignment.tagId}`;
+  }
+  
+  return `Tag ${tagAssignment.tagId}`;
+}
+
+// Lifecycle hooks
+onMounted(() => {
+  initializeThreeJs();
+  
+  // Load map if available
+  if (map.value && map.value.url) {
+    loadDxfMap(map.value.url);
+  }
+  
+  // Resize handler
+  const handleResize = () => {
+    if (!renderer || !camera || !mapContainer.value) return;
+    
+    const width = mapContainer.value.clientWidth;
+    const height = mapContainer.value.clientHeight;
+    
+    renderer.setSize(width, height);
+    
+    if (camera instanceof THREE.OrthographicCamera) {
+      const aspectRatio = width / height;
+      
+      const currentHeight = camera.top - camera.bottom;
+      const currentWidth = camera.right - camera.left;
+      
+      const newWidth = currentHeight * aspectRatio;
+      
+      camera.left = -newWidth / 2;
+      camera.right = newWidth / 2;
+      camera.updateProjectionMatrix();
+    }
+  };
+  
+  window.addEventListener('resize', handleResize);
+  
+  onUnmounted(() => {
+    window.removeEventListener('resize', handleResize);
+    
+    // Dispose Three.js resources
+    if (renderer) {
+      renderer.dispose();
+    }
+  });
+});
+
+// Watch for map changes
+watch(() => map.value?.url, (newUrl) => {
+  if (newUrl) {
+    loadDxfMap(newUrl);
+  }
+});
+</script>
+
+<style scoped>
+.dxf-map-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.dxf-map-controls {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.dxf-map-controls button {
+  width: 40px;
+  height: 40px;
+  border-radius: 4px;
+  background: white;
+  border: 1px solid #ddd;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.dxf-map-controls button:hover {
+  background: #f5f5f5;
+}
+
+.dxf-map-canvas-container {
+  width: 100%;
+  height: 100%;
+}
+
+.dxf-map-canvas {
+  width: 100%;
+  height: 100%;
+}
+
+.dxf-map-edit-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.dxf-map-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  background: #f5f5f5;
+}
+
+.upload-button {
+  margin-top: 20px;
+  padding: 10px 20px;
+  background: #3498db;
+  color: white;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.antenna-marker {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  pointer-events: auto;
+  cursor: move;
+}
+
+.antenna-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #ff6b6b;
+  border: 2px solid white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.antenna-label {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: 12px;
+  background: rgba(255, 255, 255, 0.8);
+  padding: 2px 4px;
+  border-radius: 2px;
+}
+
+.tag-marker {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.tag-icon {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.tag-marker-employee .tag-icon {
+  background: #3498db;
+  border: 2px solid white;
+}
+
+.tag-marker-asset .tag-icon {
+  background: #2ecc71;
+  border: 2px solid white;
+}
+
+.tag-label {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: 11px;
+  background: rgba(255, 255, 255, 0.8);
+  padding: 1px 3px;
+  border-radius: 2px;
+}
+</style>
+5. Login Page
+vue<!-- client/src/views/LoginView.vue -->
+<template>
+  <div class="login-container">
+    <div class="login-card">
+      <div class="login-header">
+        <img src="@/assets/logo.svg" alt="BlueIOT Site Monitor" class="logo">
+        <h1>Site Monitor</h1>
+      </div>
+      
+      <form @submit.prevent="handleLogin" class="login-form">
+        <div class="form-group">
+          <label for="username">Username</label>
+          <input 
+            id="username" 
+            v-model="username" 
+            type="text" 
+            placeholder="Enter your username"
+            required
+            :disabled="isLoading"
+          >
+        </div>
+        
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input 
+            id="password" 
+            v-model="password" 
+            type="password" 
+            placeholder="Enter your password"
+            required
+            :disabled="isLoading"
+          >
+        </div>
+        
+        <div v-if="errorMessage" class="error-message">
+          {{ errorMessage }}
+        </div>
+        
+        <button type="submit" class="login-button" :disabled="isLoading">
+          <span v-if="isLoading">
+            <i class="fas fa-spinner fa-spin"></i> Logging in...
+          </span>
+          <span v-else>Log In</span>
+        </button>
+      </form>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref } from 'vue';
+import { useRouter } from 'vue-router';
+import { useAuthStore } from '../stores/authStore';
+
+const router = useRouter();
+const authStore = useAuthStore();
+
+const username = ref('');
+const password = ref('');
+const errorMessage = ref('');
+const isLoading = ref(false);
+
+async function handleLogin() {
+  if (!username.value || !password.value) {
+    errorMessage.value = 'Please enter both username and password';
+    return;
+  }
+  
+  try {
+    isLoading.value = true;
+    errorMessage.value = '';
+    
+    await authStore.login(username.value, password.value);
+    
+    // Redirect to dashboard
+    router.push({ name: 'dashboard' });
+  } catch (error) {
+    console.error('Login error:', error);
+    errorMessage.value = 'Invalid username or password';
+  } finally {
+    isLoading.value = false;
+  }
+}
+</script>
+
+<style scoped>
+.login-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #3498db, #2980b9);
+  padding: 20px;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 400px;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  padding: 30px;
+}
+
+.login-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+.logo {
+  width: 60px;
+  height: 60px;
+  margin-bottom: 10px;
+}
+
+.login-header h1 {
+  margin: 0;
+  color: #333;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 500;
+  color: #555;
+}
+
+input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 16px;
+  transition: border-color 0.3s;
+}
+
+input:focus {
+  outline: none;
+  border-color: #3498db;
+}
+
+.error-message {
+  background-color: #fff2f2;
+  color: #e74c3c;
+  padding: 10px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+  font-size: 14px;
+}
+
+.login-button {
+  padding: 12px;
+  background-color: #3498db;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.login-button:hover:not(:disabled) {
+  background-color: #2980b9;
+}
+
+.login-button:disabled {
+  background-color: #95a5a6;
+  cursor: not-allowed;
+}
+</style>
+6. Types Definition
+typescript// client/src/types/index.ts
+export interface Company {
+  id: string;
+  name: string;
+  address: string;
+  contact: string;
+  phone: string;
+  email: string;
+}
+
+export interface Employee {
+  id: string;
+  companyId: string;
+  name: string;
+  email: string;
+  phone: string;
+  position: string;
+  department: string;
+  siteId?: string;
+  tagId?: string;
+}
+
+export interface Asset {
+  id: string;
+  companyId: string;
+  name: string;
+  type: string;
+  serialNumber: string;
+  description: string;
+  siteId?: string;
+  tagId?: string;
+}
+
+export interface SiteMap {
+  id: string;
+  siteId: string;
+  name: string;
+  floorNumber: number;
+  url: string;
+  width: number;
+  height: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Antenna {
+  id: string;
+  siteId: string;
+  mapId: string;
+  name: string;
+  x: number;
+  y: number;
+  z: number;
+  anchorId: string;
+  status: 'online' | 'offline';
+  lastSeenAt: string;
+}
+
+export interface TagAssignment {
+  id: string;
+  siteId: string;
+  tagId: string;
+  entityType: 'employee' | 'asset';
+  entityId: string;
+  assignedAt: string;
+  assignedBy: string;
+}
+
+export interface TagPosition {
+  tagId: string;
+  x: number;
+  y: number;
+  z: number;
+  mapId: string;
+  timestamp: string;
+  batteryLevel: number;
+}
+
+export interface User {
+  id: string;
+  username: string;
+  email: string;
+  companyId: string;
+  role: 'admin' | 'user';
+  firstName: string;
+  lastName: string;
+}
+
+export interface AuthState {
+  token: string | null;
+  user: User | null;
+}
+Key Features and Screens
+Dashboard
+
+Overview of site activity
+Real-time map view showing personnel and asset positions
+Quick access to recent alerts and notifications
+Summary statistics (personnel count, asset status, etc.)
+
+Site Configuration
+
+Map upload and calibration
+Antenna placement and configuration
+BlueIOT tag assignment to employees and assets
+Geofence and restricted area definition
+
+Personnel Management
+
+List of all site personnel with real-time location
+Filter and search capabilities
+Personnel details and history
+Attendance tracking
+
+Asset Tracking
+
+Real-time asset location and status
+Asset details and history
+Search and filter capabilities
+Usage statistics
+
+Reporting
+
+Activity reports
+Attendance reports
+Location history visualization
+Data export capabilities
+
+BlueIOT Integration Points
+The application interfaces with BlueIOT through:
+
+WebSocket connection for real-time data (positioning, battery status, alarms)
+REST API for configuration (tag management, antenna setup)
+Map management (import, calibration, coordinates)
+
+CRM Integration Points
+The application interfaces with your CRM through:
+
+Authentication (login)
+Company information retrieval
+Employee data retrieval (filtered for construction site)
+Asset data retrieval
+
+Setup and Development Instructions
+
+Clone the repository
+Install dependencies for both client and server
+cd blue-site-monitor
+npm install
+cd client
+npm install
+cd ../server
+npm install
+
+Configure environment variables
+Start the development servers
+# In the root directory, run:
+npm run dev
+
+
+This design provides a comprehensive starting point for building your BlueIOT integration application. The modular architecture ensures scalability and maintainability, while the separation of concerns allows for clean code organization. The integration points with both BlueIOT and your CRM are clearly defined, making implementation straightforward.
