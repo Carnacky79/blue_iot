@@ -364,17 +364,16 @@ onMounted(() => {
   };
 
   window.addEventListener('resize', handleResize);
-
-  onUnmounted(() => {
-    window.removeEventListener('resize', handleResize);
-
-    // Dispose Three.js resources
-    if (renderer) {
-      renderer.dispose();
-    }
-  });
 });
 
+onUnmounted(() => {
+  window.removeEventListener('resize', handleResize);
+
+  // Dispose Three.js resources
+  if (renderer) {
+    renderer.dispose();
+  }
+});
 // Watch for map changes
 watch(() => map.value?.url, (newUrl) => {
   if (newUrl) {

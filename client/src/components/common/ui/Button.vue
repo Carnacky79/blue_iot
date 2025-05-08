@@ -72,7 +72,7 @@ const buttonClasses = computed(() => {
       'btn-outline': props.outline,
       'btn-block': props.block,
       'btn-loading': props.loading,
-      'btn-icon-only': props.icon && !props.loading && !slots.default
+      'btn-icon-only': props.icon && !props.loading && !slots.default //da verificare se slot o $slots
     }
   ];
 });
