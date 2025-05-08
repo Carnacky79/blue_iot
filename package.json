@@ -1,0 +1,22 @@
+{
+  "name": "blue-site-monitor",
+  "version": "1.0.0",
+  "description": "BlueIOT Site Monitor - A web application for real-time tracking in construction sites",
+  "scripts": {
+    "client": "cd client && npm run dev",
+    "server": "cd server && npm run dev",
+    "mock-blueiot": "cd mock-servers/blueiot-mock && npm start",
+    "mock-crm": "cd mock-servers/crm-mock && npm start",
+    "dev": "concurrently \"npm run server\" \"npm run client\" \"npm run mock-blueiot\" \"npm run mock-crm\"",
+    "setup": "npm install && npm run setup:client && npm run setup:server && npm run setup:mock-servers",
+    "setup:client": "cd client && npm install",
+    "setup:server": "cd server && npm install",
+    "setup:mock-servers": "cd mock-servers/blueiot-mock && npm install && cd ../crm-mock && npm install",
+    "build": "npm run build:client && npm run build:server",
+    "build:client": "cd client && npm run build",
+    "build:server": "cd server && npm run build"
+  },
+  "devDependencies": {
+    "concurrently": "^7.6.0"
+  }
+}
